@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER_CORE // MULTI-STAGE CTF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-red: #ff0055;
+            --neon-green: #00ff66;
+            --neon-blue: #00f0ff;
+            --neon-yellow: #ffcc00;
+            --bg-dark: #05070a;
+            --card-bg: rgba(13, 17, 23, 0.9);
+            --border-color: rgba(255, 0, 85, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Fira Code', monospace;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #c9d1d9;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #matrix-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; opacity: 0.15; pointer-events: none;
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 10; pointer-events: none;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 440px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 0 30px rgba(255, 0, 85, 0.15);
+            transition: all 0.5s ease;
+        }
+
+        .container.lvl1-mode {
+            border-color: rgba(0, 240, 255, 0.5);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+        }
+
+        .container.completed {
+            border-color: rgba(0, 255, 102, 0.5);
+            box-shadow: 0 0 40px rgba(0, 255, 102, 0.3);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .badge-lvl0 { background: rgba(255, 0, 85, 0.15); color: var(--neon-red); border: 1px solid var(--neon-red); }
+        .badge-lvl1 { background: rgba(0, 240, 255, 0.15); color: var(--neon-blue); border: 1px solid var(--neon-blue); }
+        .badge-win { background: rgba(0, 255, 102, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
+
+        .glitch-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--neon-red);
+        }
+
+        .terminal {
+            background: #080b10;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .txt-red { color: var(--neon-red); }
+        .txt-blue { color: var(--neon-blue); }
+        .txt-green { color: var(--neon-green); }
+        .txt-yellow { color: var(--neon-yellow); }
+
+        .input-group {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .cyber-input {
+            width: 100%;
+            padding: 12px;
+            background: #080b10;
+            border: 1px solid var(--neon-blue);
+            border-radius: 6px;
+            color: #fff;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            outline: none;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-submit { background: var(--neon-blue); color: #000; }
+        .btn-hint { background: rgba(255, 204, 0, 0.1); color: var(--neon-yellow); border: 1px solid var(--neon-yellow); }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 7, 10, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-box {
+            background: #0e131b;
+            border: 1px solid var(--neon-yellow);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 380px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix-bg"></canvas>
+    <div class="scanline"></div>
+
+    <div class="container" id="mainContainer">
+        <div style="text-align: center;">
+            <div id="statusBadge" class="status-badge badge-lvl0">
+                <span id="badgeText">LEVEL 0 // LOCKED</span>
+            </div>
+        </div>
+
+        <h1 class="glitch-title" id="pageTitle">ACCESS RESTRICTED</h1>
+
+        <div class="terminal">
+            <div>> SYSTEM_STATUS: <span id="sysStatus" class="txt-red">GATE_0_LOCKED</span></div>
+            <div>> CURRENT_ROLE: <span id="roleDisplay" class="txt-yellow">guest</span></div>
+            <div id="cipherBox" style="display:none; margin-top:10px; padding:10px; background:rgba(0,240,255,0.1); border:1px dashed var(--neon-blue);">
+                > ENCRYPTED_PASSCODE:<br>
+                <b class="txt-blue" style="letter-spacing:1px;">U0FORElfX0hBQ0tFUl8yMDI2</b>
+            </div>
+        </div>
+
+        <!-- Form Input Password Level 1 -->
+        <div class="input-group" id="lvl1InputGroup">
+            <input type="text" id="passInput" class="cyber-input" placeholder="MASUKKAN PASSCODE..." autocomplete="off">
+            <button class="btn btn-submit" onclick="checkLevel1()">UNLOCK LEVEL 1</button>
+        </div>
+
+        <button class="btn btn-hint" id="hintBtn" onclick="toggleModal(true)">⚡ PETUNJUK HACK</button>
+    </div>
+
+    <!-- Modal Petunjuk -->
+    <div class="modal-overlay" id="hintModal">
+        <div class="modal-box">
+            <h3 style="color:var(--neon-yellow); margin-bottom:12px; font-family:'Orbitron';">🧩 CLUE LEVEL</h3>
+            <div id="hintContent" style="font-size:0.85rem; line-height:1.6; color:#a3b3c2;">
+                <!-- Teks teka-teki akan dimasukkan via JavaScript -->
+            </div>
+            <button class="btn btn-hint" style="margin-top:15px; width:100%;" onclick="toggleModal(false)">PAHAM, KEMBALI!</button>
+        </div>
+    </div>
+
+    <script>
+        // Audio Effects
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(freq = 440, duration = 0.1) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        // Matrix Background
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const drops = Array(Math.floor(canvas.width / 14)).fill(1);
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(5, 7, 10, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#00f0ff';
+            ctx.font = '14px monospace';
+            drops.forEach((y, i) => {
+                ctx.fillText(String.fromCharCode(65 + Math.random()*26), i * 14, y * 14);
+                if (y * 14 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        setInterval(drawMatrix, 33);
+
+        // CTF Logic
+        const urlParams = new URLSearchParams(window.location.search);
+        let role = urlParams.get('role');
+        const validRoles = ['admin', 'owner', 'boss', 'hacker'];
+
+        const mainContainer = document.getElementById('mainContainer');
+        const statusBadge = document.getElementById('statusBadge');
+        const badgeText = document.getElementById('badgeText');
+        const pageTitle = document.getElementById('pageTitle');
+        const sysStatus = document.getElementById('sysStatus');
+        const roleDisplay = document.getElementById('roleDisplay');
+        const cipherBox = document.getElementById('cipherBox');
+        const lvl1InputGroup = document.getElementById('lvl1InputGroup');
+        const hintContent = document.getElementById('hintContent');
+
+        if (role && validRoles.includes(role.toLowerCase())) {
+            // Lolos Level 0 -> Masuk Level 1
+            mainContainer.classList.add('lvl1-mode');
+            statusBadge.className = 'status-badge badge-lvl1';
+            badgeText.innerText = 'LEVEL 1 // PASSCODE REQUIRED';
+            pageTitle.innerText = 'STAGE 1: CIPHER GATE';
+            pageTitle.style.textShadow = '0 0 10px var(--neon-blue)';
+            sysStatus.innerText = 'GATE_0_CLEARED // NEED_PASSCODE';
+            sysStatus.className = 'txt-blue';
+            roleDisplay.innerText = role.toLowerCase();
+            roleDisplay.className = 'txt-green';
+            
+            cipherBox.style.display = 'block';
+            lvl1InputGroup.style.display = 'block';
+
+            // TEKA-TEKI MISTERIUS LEVEL 1 (Base64)
+            hintContent.innerHTML = `
+                <p><b>PETUNJUK LEVEL 1:</b></p>
+                <p><i>"Kode unik di layar merupakan sandi acak yang terenkripsi dalam format mesin <b>Base-64</b>."</i></p>
+                <br>
+                <p><b>MISI KAMU:</b><br>Gunakan alat penerjemah sandi digital di browser HP-mu untuk membongkar arti rahasia di balik kode tersebut!</p>
+            `;
+        } else {
+            // Level 0 Masih Terkunci
+            if (!role) {
+                window.history.replaceState(null, '', '?role=guest');
+                role = 'guest';
+            }
+            roleDisplay.innerText = role;
+
+            // TEKA-TEKI MISTERIUS LEVEL 0 (URL Parameter)
+            hintContent.innerHTML = `
+                <p><b>PETUNJUK LEVEL 0:</b></p>
+                <p><i>"Identitas dan kekuasaanmu di sistem ini ditentukan oleh alamat yang kamu tuju. Saat ini kamu hanyalah seorang 'guest' di ujung link."</i></p>
+                <br>
+                <p><b>MISI KAMU:</b><br>Ubah takdirmu langsung dari <b>kolom URL alamat browser HP-mu</b>! Ganti sebutan 'guest' tersebut menjadi sebutan penguasa tertinggi sistem!</p>
+            `;
+        }
+
+        function checkLevel1() {
+            const input = document.getElementById('passInput').value.trim();
+            // Passcode hasil decode Base64: SANDI_HACKER_2026
+            if (input.toUpperCase() === 'SANDI_HACKER_2026') {
+                playBeep(880, 0.2);
+                setTimeout(() => playBeep(1200, 0.3), 150);
+
+                mainContainer.className = 'container completed';
+                statusBadge.className = 'status-badge badge-win';
+                badgeText.innerText = 'ALL LEVELS CLEARED!';
+                pageTitle.innerText = '🎉 SYSTEM OVERRIDDEN';
+                pageTitle.style.color = 'var(--neon-green)';
+                pageTitle.style.textShadow = '0 0 10px var(--neon-green)';
+
+                cipherBox.innerHTML = `
+                    <div style="color:var(--neon-green); font-weight:bold;">
+                        GOKIL! LU BERHASIL JEBOL MULTI-STAGE CTF!<br><br>
+                        FLAG: FLAG{BASE64_MASTER_MOBILE_2026}
+                    </div>
+                `;
+                lvl1InputGroup.style.display = 'none';
+                document.getElementById('hintBtn').innerText = '📋 SS & UPLOAD KE SW!';
+                document.getElementById('hintBtn').onclick = () => alert("Screenshot layar ini terus upload ke Status WhatsApp bro 😎");
+            } else {
+                playBeep(200, 0.3);
+                alert("Passcode Salah! Coba terjemahkan dulu kode cipher di layar menggunakan decoder online!");
+            }
+        }
+
+        function toggleModal(show) {
+            playBeep(show ? 600 : 300);
+            document.getElementById('hintModal').classList.toggle('active', show);
+        }
+    </script>
+</body>
+</html>
